@@ -1,0 +1,57 @@
+{
+  "tank": "top",
+  "camera_a": {
+    "name": "top_left",
+    "frames_sampled": 151,
+    "light_color_frame_counts": {
+      "red": 70,
+      "green": 81
+    },
+    "day_night_frame_counts": {
+      "night": 70,
+      "day": 81
+    },
+    "observation_count": 3205
+  },
+  "camera_b": {
+    "name": "top_right",
+    "frames_sampled": 164,
+    "light_color_frame_counts": {
+      "red": 89,
+      "green": 75
+    },
+    "day_night_frame_counts": {
+      "night": 89,
+      "day": 75
+    },
+    "observation_count": 2997
+  },
+  "light_color_observation_counts": {
+    "red": 3099,
+    "green": 3103
+  },
+  "light_color_observation_fractions": {
+    "red": 0.49967752337955496,
+    "green": 0.500322476620445
+  },
+  "half_fractions_by_color": {
+    "green": [
+      0.3689899444580078,
+      0.6310100555419922
+    ],
+    "red": [
+      0.3299700915813446,
+      0.670029878616333
+    ]
+  },
+  "total_floor_observations": 6202,
+  "heatmap_paths": {
+    "green": "C:\\Users\\leodo\\claude\\scallopvision\\data\\demo_sessions\\top_session1\\heatmap_green.png",
+    "red": "C:\\Users\\leodo\\claude\\scallopvision\\data\\demo_sessions\\top_session1\\heatmap_red.png",
+    "overall": "C:\\Users\\leodo\\claude\\scallopvision\\data\\demo_sessions\\top_session1\\heatmap_overall.png"
+  },
+  "light_color_avg_per_frame": {
+    "red": 19.49056603773585,
+    "green": 19.891025641025642
+  }
+}

@@ -210,6 +210,47 @@ div[data-testid="stImageContainer"] img {{
 }}
 
 hr {{ border-color: #1c2530; }}
+
+.feature-grid {{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.3rem;
+}}
+@media (max-width: 900px) {{
+    .feature-grid {{ grid-template-columns: repeat(2, 1fr); }}
+}}
+.feature-card {{
+    background: linear-gradient(180deg, rgba(255,255,255,0.022), rgba(255,255,255,0.006));
+    border: 1px solid #1c2530;
+    border-radius: 12px;
+    padding: 1.2rem 1.3rem;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+}}
+.feature-card:hover {{
+    border-color: rgba(63,178,166,0.35);
+    transform: translateY(-1px);
+}}
+.feature-icon {{
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    background: rgba(63,178,166,0.12);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 0.7rem;
+}}
+.feature-icon svg {{ width: 18px; height: 18px; }}
+.feature-title {{
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.98rem;
+    font-weight: 600;
+    color: #eef1f3;
+    margin-bottom: 0.35rem;
+}}
+.feature-desc {{
+    color: #8894a0;
+    font-size: 0.85rem;
+    line-height: 1.5;
+}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -314,6 +355,53 @@ if reels:
             label = name.replace("_", " ").title()
             st.video(os.path.join(REELS_DIR, reel))
             st.caption(f"{label} camera")
+
+
+FEATURES = [
+    (
+        '<path d="M3 7l6-3 6 3 6-3v13l-6 3-6-3-6 3V7z"/><path d="M9 4v13M15 7v13"/>',
+        "Overhead 2D tank mapping",
+        "Fuses both camera views into one top-down map of the tank floor, so every scallop's position is shown relative to the whole tank — not just to whichever camera happened to see it.",
+    ),
+    (
+        '<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/>',
+        "Automatic light-color reading",
+        "Reads each frame's actual light color directly off the footage — green, blue, or red/night — with no manual logging required.",
+    ),
+    (
+        '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.6" fill="currentColor"/>',
+        "Every scallop, every frame",
+        "A custom-trained detector locates every visible scallop in every sampled frame at full resolution, not a downsampled approximation.",
+    ),
+    (
+        '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+        "Multi-day pattern tracking",
+        "Built to analyze recordings spanning many days, sampling across every light-color rotation instead of one short snapshot.",
+    ),
+    (
+        '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
+        "Day/night aware",
+        "Automatically separates the ambient day/night cycle from the colored test lights, since red is functionally night for scallops.",
+    ),
+    (
+        '<path d="M7 20V10M12 20V4M17 20v-7"/>',
+        "Cross-tank comparison",
+        "Puts independent tanks side by side on the same metrics, so you can see whether a pattern actually holds up or not.",
+    ),
+]
+
+feature_html = '<div class="feature-grid">'
+for icon, title, desc in FEATURES:
+    feature_html += f'''
+    <div class="feature-card">
+      <div class="feature-icon" style="color:{ACCENT};">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{icon}</svg>
+      </div>
+      <div class="feature-title">{title}</div>
+      <div class="feature-desc">{desc}</div>
+    </div>'''
+feature_html += '</div>'
+st.markdown(feature_html, unsafe_allow_html=True)
 
 
 st.markdown("""

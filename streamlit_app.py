@@ -431,13 +431,13 @@ def render_results(stats: dict, heatmap_paths: dict, session_label: str):
     st.markdown('<div class="section-title" style="margin-top:1.2rem;">Per-camera breakdown</div>', unsafe_allow_html=True)
     st.caption("How many sampled frames each camera saw under each light color")
     colors_all = list(avg_per_color.keys())
-    st.plotly_chart(camera_breakdown_chart(cam_a, cam_b, colors_all), use_container_width=True,
+    st.plotly_chart(camera_breakdown_chart(cam_a, cam_b, colors_all), width='stretch',
                      config={"displayModeBar": False})
 
     dn_col1, dn_col2 = st.columns([1, 1])
     with dn_col1:
         st.markdown('<div class="section-title">Day vs. night frames sampled</div>', unsafe_allow_html=True)
-        st.plotly_chart(daynight_chart(cam_a, cam_b), use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(daynight_chart(cam_a, cam_b), width='stretch', config={"displayModeBar": False})
     with dn_col2:
         st.markdown('<div class="section-title">Summary</div>', unsafe_allow_html=True)
         with st.spinner("Generating summary..."):
@@ -494,7 +494,7 @@ if sessions:
             ))
         fig.update_layout(colorway=[ACCENT, "#d1a35a"])
         st.plotly_chart(_dark_layout(fig, height=320, yaxis_title="Avg scallops / frame"),
-                         use_container_width=True, config={"displayModeBar": False})
+                         width='stretch', config={"displayModeBar": False})
         st.markdown("</div>", unsafe_allow_html=True)
 else:
     st.info("No precomputed demo sessions found yet in data/demo_sessions/. Run src/pipeline.py first.")

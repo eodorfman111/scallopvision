@@ -353,7 +353,7 @@ if reels:
     for (name, reel), col in zip(reels, cols):
         with col:
             label = name.replace("_", " ").title()
-            st.video(os.path.join(REELS_DIR, reel))
+            st.video(os.path.join(REELS_DIR, reel), autoplay=True, loop=True, muted=True)
             st.caption(f"{label} camera")
 
 

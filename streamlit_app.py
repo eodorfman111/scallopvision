@@ -36,7 +36,11 @@ from dotenv import load_dotenv
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
-from pipeline import run_session
+# pipeline.py pulls in cv2 + ultralytics, which depend on native system
+# libraries (libGL, glib, etc.) that can be missing/misconfigured on a given
+# deploy environment. Import it lazily (only when "Upload your own footage"
+# is actually used) so a native-library hiccup there can't take down the
+# whole app - the precomputed demo sessions don't need it at all.
 from narration import generate_ai_summary, COLOR_LABELS
 
 load_dotenv()
@@ -508,6 +512,16 @@ with st.expander("Upload your own footage (runs the live pipeline)"):
         cam_b_file = st.file_uploader("Camera B video", type=["mp4"], key="cam_b")
 
     if st.button("Run analysis", disabled=not (cam_a_file and cam_b_file)):
+        try:
+            from pipeline import run_session
+        except ImportError as e:
+            st.error(
+                f"Couldn't load the detection pipeline in this environment (missing native "
+                f"library: {e}). The precomputed demo sessions above are unaffected - this only "
+                f"blocks live analysis of freshly uploaded footage."
+            )
+            st.stop()
+
         with tempfile.TemporaryDirectory() as tmp_dir:
             cam_a_path = os.path.join(tmp_dir, "cam_a.mp4")
             cam_b_path = os.path.join(tmp_dir, "cam_b.mp4")

@@ -8,17 +8,25 @@ IMPORTANT finding from real footage (2026-07-12): the source videos are not
 continuous single sessions - they are multi-day timelapse compilations
 (consecutive frames can be hours to days apart in real time, confirmed via
 burned-in camera timestamps jumping non-monotonically in small frame steps).
-That makes frame-to-frame scallop tracking meaningless (a "track" between two
-frames days apart isn't the same animal moving, it's an unrelated snapshot),
-so this pipeline does NOT track individual scallops or compute session dwell
-time. Instead each sampled frame is treated as an independent observation:
-its own light color is classified on the spot (light color visibly changes
-across the timelapse, consistent with the known fact that the light position
-rotates through slots over time) and its detections are binned into a
-heatmap keyed by that frame's light color. Aggregating over many days this
-way is arguably a *better* light-preference signal than a single short
-session would have been, since it naturally samples many rotations of the
-light and many day/night cycles.
+That makes persistent frame-to-frame scallop IDENTITY tracking meaningless (a
+"track" between two frames days apart isn't the same animal moving, it's an
+unrelated snapshot), so this pipeline does NOT maintain per-scallop identity
+or compute session dwell time. Instead each sampled frame is treated as an
+independent observation: its own light color is classified on the spot
+(light color visibly changes across the timelapse, consistent with the known
+fact that the light position rotates through slots over time) and its
+detections are binned into a heatmap keyed by that frame's light color.
+Aggregating over many days this way is arguably a *better* light-preference
+signal than a single short session would have been, since it naturally
+samples many rotations of the light and many day/night cycles.
+
+MOTION SCORE (added 2026-07-14, client-requested): a lightweight EXCEPTION to
+the "no tracking" rule above - see motion.py. This does NOT maintain identity
+across the whole session; it only does nearest-neighbor matching between each
+CONSECUTIVE pair of sampled frames independently, to estimate how much
+scallops' positions shifted from one snapshot to the next. Explicitly framed
+as a relative/comparative signal, not a calibrated speed, since sample
+spacing in real time is uneven (see motion.py's docstring for why).
 
 Usage:
     python pipeline.py --tank bottom \
@@ -38,6 +46,7 @@ from ultralytics import YOLO
 from light_classifier import classify_frame
 from rectify import rectify_points
 from heatmap import HeatmapAccumulator
+from motion import compute_motion_score
 
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "..", "model", "best.pt")
 CONF_THRESHOLD = 0.20  # 0.35 was visibly missing partially-overlapping scallops in dense clusters (confirmed by spot-checking boxes at multiple thresholds on real frames) - 0.20 catches those without adding obvious false positives
@@ -105,6 +114,7 @@ def process_camera(video_path, camera_name, flip_axis, model, scallop_class_idx)
     day_night_frame_counts = defaultdict(int)
     light_color_observation_counts = defaultdict(int)
     rectified_points_by_color = defaultdict(list)
+    frame_sequence = []  # chronological [(light_color, rectified_points), ...] for motion scoring
 
     # Classify on a downsized copy - a global dominant-hue read doesn't need
     # full 4K resolution, and this cut per-frame classification time enormously.
@@ -130,6 +140,13 @@ def process_camera(video_path, camera_name, flip_axis, model, scallop_class_idx)
                 rectified = rectify_points(raw_points, frame_w, frame_h, camera_name, flip_axis=flip_axis)
                 rectified_points_by_color[light_color].extend(rectified)
                 light_color_observation_counts[light_color] += len(rectified)
+            else:
+                rectified = []
+            # Keep every sampled frame in order (even zero-detection ones) so
+            # motion.py can match consecutive pairs correctly.
+            frame_sequence.append((light_color, rectified))
+
+    motion = compute_motion_score(frame_sequence)
 
     return {
         "frames_sampled": len(frames),
@@ -137,6 +154,7 @@ def process_camera(video_path, camera_name, flip_axis, model, scallop_class_idx)
         "day_night_frame_counts": dict(day_night_frame_counts),
         "light_color_observation_counts": dict(light_color_observation_counts),
         "rectified_points_by_color": dict(rectified_points_by_color),
+        "motion": motion,
     }
 
 
@@ -211,6 +229,37 @@ def run_session(tank_name, cam_a_path, cam_a_name, cam_b_path, cam_b_name, out_d
         if light_color_frame_counts_merged.get(c)
     }
 
+    # Combine both cameras' motion scores, weighted by how many frame-pairs
+    # each actually contributed - a camera with more usable pairs should
+    # count for more in the combined average, not be weighted equally with
+    # one that barely had any matched pairs.
+    motion_a, motion_b = res_a["motion"], res_b["motion"]
+    total_pairs = motion_a["frame_pairs_matched"] + motion_b["frame_pairs_matched"]
+    if total_pairs:
+        combined_avg_shift = (
+            motion_a["overall_avg_shift"] * motion_a["frame_pairs_matched"]
+            + motion_b["overall_avg_shift"] * motion_b["frame_pairs_matched"]
+        ) / total_pairs
+    else:
+        combined_avg_shift = 0.0
+
+    motion_colors = set(motion_a["avg_shift_by_color"]) | set(motion_b["avg_shift_by_color"])
+    combined_shift_by_color = {}
+    for c in motion_colors:
+        vals, weights = [], []
+        for m in (motion_a, motion_b):
+            if c in m["avg_shift_by_color"]:
+                vals.append(m["avg_shift_by_color"][c])
+                weights.append(1)  # per-color pair counts aren't tracked separately; simple mean across cameras
+        if vals:
+            combined_shift_by_color[c] = sum(vals) / len(vals)
+
+    motion_score = {
+        "overall_avg_shift": combined_avg_shift,
+        "avg_shift_by_color": combined_shift_by_color,
+        "frame_pairs_matched": total_pairs,
+    }
+
     stats = {
         "tank": tank_name,
         "camera_a": {
@@ -219,6 +268,7 @@ def run_session(tank_name, cam_a_path, cam_a_name, cam_b_path, cam_b_name, out_d
             "light_color_frame_counts": res_a["light_color_frame_counts"],
             "day_night_frame_counts": res_a["day_night_frame_counts"],
             "observation_count": sum(res_a["light_color_observation_counts"].values()),
+            "motion": motion_a,
         },
         "camera_b": {
             "name": cam_b_name,
@@ -226,11 +276,13 @@ def run_session(tank_name, cam_a_path, cam_a_name, cam_b_path, cam_b_name, out_d
             "light_color_frame_counts": res_b["light_color_frame_counts"],
             "day_night_frame_counts": res_b["day_night_frame_counts"],
             "observation_count": sum(res_b["light_color_observation_counts"].values()),
+            "motion": motion_b,
         },
         "light_color_observation_counts": light_color_observation_counts,
         "light_color_observation_fractions": light_color_observation_fractions,
         "light_color_avg_per_frame": light_color_avg_per_frame,
         "half_fractions_by_color": half_fractions_by_color,
+        "motion_score": motion_score,
         "total_floor_observations": total_obs,
         "heatmap_paths": heatmap_paths,
     }

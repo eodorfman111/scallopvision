@@ -12,7 +12,16 @@
       "night": 48,
       "day": 103
     },
-    "observation_count": 2879
+    "observation_count": 2879,
+    "motion": {
+      "overall_avg_shift": 24.44785645946477,
+      "frame_pairs_matched": 150,
+      "avg_shift_by_color": {
+        "red": 26.29867966793028,
+        "green": 24.379634471987647,
+        "blue": 22.380588819794276
+      }
+    }
   },
   "camera_b": {
     "name": "bottom_right",
@@ -26,7 +35,16 @@
       "night": 45,
       "day": 106
     },
-    "observation_count": 2576
+    "observation_count": 2576,
+    "motion": {
+      "overall_avg_shift": 22.87172065790366,
+      "frame_pairs_matched": 150,
+      "avg_shift_by_color": {
+        "red": 25.70293159334508,
+        "green": 21.746144019613585,
+        "blue": 21.65046842869222
+      }
+    }
   },
   "light_color_observation_counts": {
     "red": 1561,
@@ -38,30 +56,39 @@
     "green": 0.400916590284143,
     "blue": 0.31292392300641614
   },
+  "light_color_avg_per_frame": {
+    "red": 16.78494623655914,
+    "green": 19.18421052631579,
+    "blue": 17.96842105263158
+  },
   "half_fractions_by_color": {
-    "blue": [
-      0.3314746022224426,
-      0.6685253977775574
+    "green": [
+      0.37673527002334595,
+      0.623264729976654
     ],
     "red": [
       0.3576594293117523,
       0.6423405408859253
     ],
-    "green": [
-      0.37673527002334595,
-      0.623264729976654
+    "blue": [
+      0.3314746022224426,
+      0.6685253977775574
     ]
+  },
+  "motion_score": {
+    "overall_avg_shift": 23.659788558684212,
+    "avg_shift_by_color": {
+      "green": 23.062889245800616,
+      "red": 26.00080563063768,
+      "blue": 22.01552862424325
+    },
+    "frame_pairs_matched": 300
   },
   "total_floor_observations": 5455,
   "heatmap_paths": {
-    "blue": "C:\\Users\\leodo\\claude\\scallopvision\\data\\demo_sessions\\bottom_session1\\heatmap_blue.png",
-    "red": "C:\\Users\\leodo\\claude\\scallopvision\\data\\demo_sessions\\bottom_session1\\heatmap_red.png",
     "green": "C:\\Users\\leodo\\claude\\scallopvision\\data\\demo_sessions\\bottom_session1\\heatmap_green.png",
+    "red": "C:\\Users\\leodo\\claude\\scallopvision\\data\\demo_sessions\\bottom_session1\\heatmap_red.png",
+    "blue": "C:\\Users\\leodo\\claude\\scallopvision\\data\\demo_sessions\\bottom_session1\\heatmap_blue.png",
     "overall": "C:\\Users\\leodo\\claude\\scallopvision\\data\\demo_sessions\\bottom_session1\\heatmap_overall.png"
-  },
-  "light_color_avg_per_frame": {
-    "red": 16.78494623655914,
-    "green": 19.18421052631579,
-    "blue": 17.96842105263158
   }
 }

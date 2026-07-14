@@ -59,6 +59,20 @@ def _preference_sentence(avgs: dict):
     )
 
 
+def _motion_sentence(motion_score: dict):
+    if not motion_score or not motion_score.get("frame_pairs_matched"):
+        return "Not enough consecutive-frame matches were available to compute a motion score for this session."
+    by_color = motion_score.get("avg_shift_by_color", {})
+    overall = motion_score.get("overall_avg_shift", 0)
+    parts = ", ".join(f"{COLOR_LABELS.get(c, c)}: {v:.0f}" for c, v in _sorted_colors(by_color))
+    return (
+        f"Overall positional shift between consecutive sampled frames averaged {overall:.0f} "
+        f"(rectified-space units, unitless relative measure). By light color: {parts}. "
+        f"This reflects repositioning between snapshots, not a calibrated speed, since sample "
+        f"spacing in real time is uneven across this timelapse."
+    )
+
+
 def generate_fallback_summary(stats: dict, session_name: str = "this tank") -> str:
     cam_a = stats.get("camera_a", {})
     cam_b = stats.get("camera_b", {})
@@ -78,6 +92,8 @@ This analysis sampled {total_frames} independent frames across both camera angle
 {breakdown_lines}
 
 Overall, {_preference_sentence(avgs)}.
+
+**Motion:** {_motion_sentence(stats.get("motion_score", {}))}
 
 *(Rule-based summary — set an OPENAI_API_KEY or GEMINI_API_KEY environment variable for a fuller narrative write-up.)*"""
 
@@ -101,6 +117,7 @@ def generate_ai_summary(stats: dict, session_name: str = "this tank") -> str:
         cam_a = stats.get("camera_a", {})
         cam_b = stats.get("camera_b", {})
         avgs = stats.get("light_color_avg_per_frame", {})
+        motion_score = stats.get("motion_score", {})
 
         prompt = f"""
         You are a marine biology research assistant summarizing a scallop light-preference tank study.
@@ -131,13 +148,24 @@ def generate_ai_summary(stats: dict, session_name: str = "this tank") -> str:
         (the ONLY metric to compare colors with - no per-camera breakdown by color is given,
         so do not invent one): {avgs}
 
-        Write a concise (under 180 words) plain-English summary of what this data suggests, e.g.
-        "Frames lit green averaged X scallops detected, versus Y under blue and Z under red." If the
-        differences are small (under ~15% relative), say explicitly that there's no meaningful
-        difference rather than dressing up noise as a preference. Frame this as an aggregate
-        spatial/visibility tendency across many independent snapshots of one fixed population, not
-        proof that any individual scallop "chose" or "moved toward" a color - the data can't support
-        animal-level or movement claims, only population-level detection frequency.
+        MOTION SCORE (separate metric, not a scallop count): overall_avg_shift =
+        {motion_score.get('overall_avg_shift', 0):.1f}, by light color: {motion_score.get('avg_shift_by_color', {})},
+        based on {motion_score.get('frame_pairs_matched', 0)} matched consecutive-frame pairs.
+        This measures how far detected scallops' positions shifted between one sampled snapshot
+        and the next (nearest-neighbor matched, capped distance) - it is NOT a calibrated speed,
+        since the real-time gap between samples is uneven across this timelapse. Describe it only
+        as "how much repositioning happened between snapshots," and if the by-color values are
+        close to each other (within ~15%), say there's no meaningful difference by color rather
+        than inventing one. Do not call this "velocity," "speed," or give it a unit like cm/s.
+
+        Write a concise (under 200 words) plain-English summary covering both the light-color
+        detection pattern and the motion score. For the color pattern, e.g. "Frames lit green
+        averaged X scallops detected, versus Y under blue and Z under red." If the differences are
+        small (under ~15% relative), say explicitly that there's no meaningful difference rather
+        than dressing up noise as a preference. Frame this as an aggregate spatial/visibility
+        tendency across many independent snapshots of one fixed population, not proof that any
+        individual scallop "chose" or "moved toward" a color - the data can't support animal-level
+        or movement-intent claims, only population-level detection frequency and positional shift.
 
         IMPORTANT: refer to the two cameras by their actual names given above (e.g. "{cam_a.get('name')}"
         and "{cam_b.get('name')}"), never as generic "Camera A" / "Camera B".

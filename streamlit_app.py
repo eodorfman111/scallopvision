@@ -319,6 +319,17 @@ def daynight_chart(cam_a, cam_b):
     return _dark_layout(fig, height=240, yaxis_title="Frames sampled")
 
 
+def motion_chart(motion_score):
+    by_color = motion_score.get("avg_shift_by_color", {})
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=[COLOR_LABELS.get(c, c).title() for c in by_color],
+        y=list(by_color.values()),
+        marker_color=[COLOR_HEX.get(c, "#7c8896") for c in by_color],
+    ))
+    return _dark_layout(fig, height=220, yaxis_title="Avg. positional shift")
+
+
 st.markdown("""
 <div class="hero">
   <div class="hero-eyebrow">Coonamessett Farm Foundation — Scallop Light Study</div>
@@ -387,6 +398,11 @@ FEATURES = [
         '<path d="M7 20V10M12 20V4M17 20v-7"/>',
         "Cross-tank comparison",
         "Puts independent tanks side by side on the same metrics, so you can see whether a pattern actually holds up or not.",
+    ),
+    (
+        '<path d="M4 12h4l3 8 4-16 3 8h4"/>',
+        "Motion score",
+        "Matches detected scallops between consecutive snapshots to measure how much repositioning is happening — near zero when the tank is still, higher when scallops are actively moving around.",
     ),
 ]
 
@@ -521,6 +537,23 @@ def render_results(stats: dict, heatmap_paths: dict, session_label: str):
     colors_all = list(avg_per_color.keys())
     st.plotly_chart(camera_breakdown_chart(cam_a, cam_b, colors_all), width='stretch',
                      config={"displayModeBar": False})
+
+    motion_score = stats.get("motion_score", {})
+    if motion_score.get("frame_pairs_matched"):
+        st.markdown('<div class="section-title" style="margin-top:1.2rem;">Motion score</div>', unsafe_allow_html=True)
+        st.caption(
+            "How much scallops repositioned between consecutive sampled frames — near zero means "
+            "the tank was mostly still, higher means more movement. Not a calibrated speed (sample "
+            "spacing in real time is uneven across this timelapse), so read it as relative, not absolute."
+        )
+        mc1, mc2 = st.columns([1, 2])
+        with mc1:
+            st.markdown(f'<div class="small-label">Overall</div>'
+                        f'<div class="big-stat">{motion_score.get("overall_avg_shift", 0):.0f}</div>'
+                        f'<div class="small-label">avg. shift / snapshot pair</div>',
+                        unsafe_allow_html=True)
+        with mc2:
+            st.plotly_chart(motion_chart(motion_score), width='stretch', config={"displayModeBar": False})
 
     dn_col1, dn_col2 = st.columns([1, 1])
     with dn_col1:

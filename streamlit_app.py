@@ -203,10 +203,15 @@ div[data-testid="stImageContainer"] img {{
 }}
 
 .stTabs [data-baseweb="tab-list"] {{
-    gap: 4px;
+    gap: 28px;
 }}
 .stTabs [data-baseweb="tab"] {{
+    padding: 6px 2px !important;
+    margin: 0 !important;
     border-radius: 6px 6px 0 0;
+}}
+.stTabs [data-baseweb="tab"] p {{
+    font-size: 0.92rem;
 }}
 
 hr {{ border-color: #1c2530; }}

@@ -406,54 +406,52 @@ FEATURES = [
     ),
 ]
 
-feature_html = '<div class="feature-grid">'
-for icon, title, desc in FEATURES:
-    feature_html += f'''
-    <div class="feature-card">
-      <div class="feature-icon" style="color:{ACCENT};">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{icon}</svg>
-      </div>
-      <div class="feature-title">{title}</div>
-      <div class="feature-desc">{desc}</div>
-    </div>'''
-feature_html += '</div>'
-st.markdown(feature_html, unsafe_allow_html=True)
+with st.expander("What ScallopVision does", expanded=False):
+    feature_html = '<div class="feature-grid">'
+    for icon, title, desc in FEATURES:
+        feature_html += f'''
+        <div class="feature-card">
+          <div class="feature-icon" style="color:{ACCENT};">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{icon}</svg>
+          </div>
+          <div class="feature-title">{title}</div>
+          <div class="feature-desc">{desc}</div>
+        </div>'''
+    feature_html += '</div>'
+    st.markdown(feature_html, unsafe_allow_html=True)
 
 
-st.markdown("""
-<div class="section-card">
-  <div class="section-title">The experiment</div>
-  <p style="color:#9aa5b1; line-height:1.6; margin-top:0.6rem;">
-  Two independent tanks (top and bottom), each with its own fixed set of scallops that stayed in
-  that tank for the full study. Each tank has two cameras mounted on opposite walls, facing each
-  other, and at any given time runs a single test light — green or blue — on one side, rotated to
-  a different corner roughly every two weeks so each color spent time in every position. Red is
-  part of the normal day/night cycle, not a test color: scallops can't see red, so it's the
-  functional equivalent of night. The underlying question: does a colored light attract scallops
-  toward it?
-  </p>
-  <p style="color:#9aa5b1; line-height:1.6;">
-  Each camera's raw footage is perspective-corrected ("rectified") into a straight-down view of
-  just the floor it can see, then the two cameras' rectified views are stitched into one shared
-  top-down map — one camera's view is mirrored so "near this camera's wall" lines up consistently
-  on both sides. Every scallop the detector finds, in every sampled frame, gets plotted onto that
-  map, tagged with whichever light was active in that frame.
-  </p>
-</div>
-
-<div class="note-box">
-<b>What this demo can and can't tell you yet:</b> the detector and automatic light-reading both
-work reliably — that part is solid. But turning that into "scallops prefer green" requires knowing
-which physical corner had the colored light at each point in time, and matching that against where
-scallops sat. Light scatters through the whole tank, so we can't reliably recover "which corner was
-lit" from color alone — that needs the actual placement log. The two candidate metrics below
-(detection rate by color, and positional split by wall) are shown for transparency, but neither
-cleanly isolates a light-driven effect on their own: detection rate is confounded by how much easier
-scallops are to see under brighter colors, and the positional split turns out nearly identical
-regardless of which color is active — including red/night — suggesting it reflects a standing wall
-preference more than a light response. Worth resolving with the actual corner-assignment schedule.
-</div>
-""", unsafe_allow_html=True)
+with st.expander("About the experiment & what this data can/can't tell you yet", expanded=False):
+    st.markdown("""
+    <p style="color:#9aa5b1; line-height:1.6; margin-top:0.2rem;">
+    Two independent tanks (top and bottom), each with its own fixed set of scallops that stayed in
+    that tank for the full study. Each tank has two cameras mounted on opposite walls, facing each
+    other, and at any given time runs a single test light — green or blue — on one side, rotated to
+    a different corner roughly every two weeks so each color spent time in every position. Red is
+    part of the normal day/night cycle, not a test color: scallops can't see red, so it's the
+    functional equivalent of night. The underlying question: does a colored light attract scallops
+    toward it?
+    </p>
+    <p style="color:#9aa5b1; line-height:1.6;">
+    Each camera's raw footage is perspective-corrected ("rectified") into a straight-down view of
+    just the floor it can see, then the two cameras' rectified views are stitched into one shared
+    top-down map — one camera's view is mirrored so "near this camera's wall" lines up consistently
+    on both sides. Every scallop the detector finds, in every sampled frame, gets plotted onto that
+    map, tagged with whichever light was active in that frame.
+    </p>
+    <div class="note-box">
+    <b>What this demo can and can't tell you yet:</b> the detector and automatic light-reading both
+    work reliably — that part is solid. But turning that into "scallops prefer green" requires knowing
+    which physical corner had the colored light at each point in time, and matching that against where
+    scallops sat. Light scatters through the whole tank, so we can't reliably recover "which corner was
+    lit" from color alone — that needs the actual placement log. The two candidate metrics below
+    (detection rate by color, and positional split by wall) are shown for transparency, but neither
+    cleanly isolates a light-driven effect on their own: detection rate is confounded by how much easier
+    scallops are to see under brighter colors, and the positional split turns out nearly identical
+    regardless of which color is active — including red/night — suggesting it reflects a standing wall
+    preference more than a light response. Worth resolving with the actual corner-assignment schedule.
+    </div>
+    """, unsafe_allow_html=True)
 
 
 def list_demo_sessions():
@@ -478,95 +476,99 @@ def render_results(stats: dict, heatmap_paths: dict, session_label: str):
     avg_per_frame = (obs_total / frames_total) if frames_total else 0
     max_avg = max(avg_per_color.values()) if avg_per_color else 1
 
-    st.markdown(f"""
-    <div class="note-box">
-    <b>Reading these numbers:</b> the tank's scallops are a fixed, enclosed population — they don't
-    enter or leave. What varies is how many are visible/positioned favorably in a given frame, so
-    "{obs_total:.0f} observations" means {frames_total} independent snapshots × ~{avg_per_frame:.0f}
-    scallops visible per snapshot on average, not {obs_total:.0f} distinct animals. The chart on the
-    right shows <b>average scallops detected per frame of each color</b> — not a percentage of the
-    total, since a color sampled in more frames would otherwise look artificially "preferred" just by
-    accumulating a bigger raw total.
-    </div>
-    """, unsafe_allow_html=True)
+    tab_overview, tab_motion, tab_summary = st.tabs(["Overview", "Motion & timing", "Summary"])
 
-    col1, col2 = st.columns([1.3, 1])
+    with tab_overview:
+        st.markdown(f"""
+        <div class="note-box">
+        <b>Reading these numbers:</b> the tank's scallops are a fixed, enclosed population — they don't
+        enter or leave. What varies is how many are visible/positioned favorably in a given frame, so
+        "{obs_total:.0f} observations" means {frames_total} independent snapshots × ~{avg_per_frame:.0f}
+        scallops visible per snapshot on average, not {obs_total:.0f} distinct animals. The chart on the
+        right shows <b>average scallops detected per frame of each color</b> — not a percentage of the
+        total, since a color sampled in more frames would otherwise look artificially "preferred" just by
+        accumulating a bigger raw total.
+        </div>
+        """, unsafe_allow_html=True)
 
-    with col1:
-        st.markdown('<div class="section-title">Top-down floor map</div>', unsafe_allow_html=True)
-        st.caption(f"Both cameras' rectified views combined · {cam_a.get('name','camera A')} + {cam_b.get('name','camera B')}")
-        colors_present = [c for c in heatmap_paths if c != "overall" and os.path.isfile(heatmap_paths[c])]
-        tab_labels = ["Overall"] + [COLOR_LABELS.get(c, c).title() for c in colors_present]
-        tabs = st.tabs(tab_labels)
-        with tabs[0]:
-            if os.path.isfile(heatmap_paths.get("overall", "")):
-                st.image(heatmap_paths["overall"], width="stretch",
-                          caption="Every sampled frame combined, regardless of light color — brighter = more scallops detected there")
-        for tab, color in zip(tabs[1:], colors_present):
-            with tab:
-                avg_val = avg_per_color.get(color, 0)
-                st.image(heatmap_paths[color], width="stretch",
-                          caption=f"Only frames where {COLOR_LABELS.get(color, color)} was active — {counts.get(color, 0):.0f} total detections, {avg_val:.1f} avg/frame")
+        col1, col2 = st.columns([1.3, 1])
 
-    with col2:
-        st.markdown('<div class="section-title">Light-color preference</div>', unsafe_allow_html=True)
-        st.caption("Average scallops detected per frame, by the light color active in that frame")
-        bars_html = "".join(avg_bar(c, v, max_avg) for c, v in sorted(avg_per_color.items(), key=lambda kv: kv[1], reverse=True))
-        st.markdown(bars_html, unsafe_allow_html=True)
+        with col1:
+            st.markdown('<div class="section-title">Top-down floor map</div>', unsafe_allow_html=True)
+            st.caption(f"Both cameras' rectified views combined · {cam_a.get('name','camera A')} + {cam_b.get('name','camera B')}")
+            colors_present = [c for c in heatmap_paths if c != "overall" and os.path.isfile(heatmap_paths[c])]
+            tab_labels = ["Overall"] + [COLOR_LABELS.get(c, c).title() for c in colors_present]
+            map_tabs = st.tabs(tab_labels)
+            with map_tabs[0]:
+                if os.path.isfile(heatmap_paths.get("overall", "")):
+                    st.image(heatmap_paths["overall"], width="stretch",
+                              caption="Every sampled frame combined, regardless of light color — brighter = more scallops detected there")
+            for tab, color in zip(map_tabs[1:], colors_present):
+                with tab:
+                    avg_val = avg_per_color.get(color, 0)
+                    st.image(heatmap_paths[color], width="stretch",
+                              caption=f"Only frames where {COLOR_LABELS.get(color, color)} was active — {counts.get(color, 0):.0f} total detections, {avg_val:.1f} avg/frame")
 
-        st.markdown("<br>", unsafe_allow_html=True)
-        m1, m2, m3 = st.columns(3)
-        with m1:
-            st.markdown(f'<div class="small-label">Avg / frame</div>'
-                        f'<div class="big-stat">{avg_per_frame:.0f}</div>'
-                        f'<div class="small-label">scallops detected</div>',
-                        unsafe_allow_html=True)
-        with m2:
-            st.markdown(f'<div class="small-label">{cam_a.get("name","Camera A")}</div>'
-                        f'<div class="big-stat">{cam_a.get("frames_sampled",0)}</div>'
-                        f'<div class="small-label">frames sampled</div>',
-                        unsafe_allow_html=True)
-        with m3:
-            st.markdown(f'<div class="small-label">{cam_b.get("name","Camera B")}</div>'
-                        f'<div class="big-stat">{cam_b.get("frames_sampled",0)}</div>'
-                        f'<div class="small-label">frames sampled</div>',
-                        unsafe_allow_html=True)
+        with col2:
+            st.markdown('<div class="section-title">Light-color preference</div>', unsafe_allow_html=True)
+            st.caption("Average scallops detected per frame, by the light color active in that frame")
+            bars_html = "".join(avg_bar(c, v, max_avg) for c, v in sorted(avg_per_color.items(), key=lambda kv: kv[1], reverse=True))
+            st.markdown(bars_html, unsafe_allow_html=True)
 
-    st.markdown('<div class="section-title" style="margin-top:1.2rem;">Per-camera breakdown</div>', unsafe_allow_html=True)
-    st.caption("How many sampled frames each camera saw under each light color")
-    colors_all = list(avg_per_color.keys())
-    st.plotly_chart(camera_breakdown_chart(cam_a, cam_b, colors_all), width='stretch',
-                     config={"displayModeBar": False})
+            st.markdown("<br>", unsafe_allow_html=True)
+            m1, m2, m3 = st.columns(3)
+            with m1:
+                st.markdown(f'<div class="small-label">Avg / frame</div>'
+                            f'<div class="big-stat">{avg_per_frame:.0f}</div>'
+                            f'<div class="small-label">scallops detected</div>',
+                            unsafe_allow_html=True)
+            with m2:
+                st.markdown(f'<div class="small-label">{cam_a.get("name","Camera A")}</div>'
+                            f'<div class="big-stat">{cam_a.get("frames_sampled",0)}</div>'
+                            f'<div class="small-label">frames sampled</div>',
+                            unsafe_allow_html=True)
+            with m3:
+                st.markdown(f'<div class="small-label">{cam_b.get("name","Camera B")}</div>'
+                            f'<div class="big-stat">{cam_b.get("frames_sampled",0)}</div>'
+                            f'<div class="small-label">frames sampled</div>',
+                            unsafe_allow_html=True)
 
-    motion_score = stats.get("motion_score", {})
-    if motion_score.get("frame_pairs_matched"):
-        st.markdown('<div class="section-title" style="margin-top:1.2rem;">Motion score</div>', unsafe_allow_html=True)
-        st.caption(
-            "How much scallops repositioned between consecutive sampled frames — near zero means "
-            "the tank was mostly still, higher means more movement. Not a calibrated speed (sample "
-            "spacing in real time is uneven across this timelapse), so read it as relative, not absolute."
-        )
-        mc1, mc2 = st.columns([1, 2])
-        with mc1:
-            st.markdown(f'<div class="small-label">Overall</div>'
-                        f'<div class="big-stat">{motion_score.get("overall_avg_shift", 0):.0f}</div>'
-                        f'<div class="small-label">avg. shift / snapshot pair</div>',
-                        unsafe_allow_html=True)
-        with mc2:
-            st.plotly_chart(motion_chart(motion_score), width='stretch', config={"displayModeBar": False})
+        with st.expander("Raw stats JSON"):
+            st.json(stats)
 
-    dn_col1, dn_col2 = st.columns([1, 1])
-    with dn_col1:
-        st.markdown('<div class="section-title">Day vs. night frames sampled</div>', unsafe_allow_html=True)
+    with tab_motion:
+        motion_score = stats.get("motion_score", {})
+        if motion_score.get("frame_pairs_matched"):
+            st.markdown('<div class="section-title">Motion score</div>', unsafe_allow_html=True)
+            st.caption(
+                "How much scallops repositioned between consecutive sampled frames — near zero means "
+                "the tank was mostly still, higher means more movement. Not a calibrated speed (sample "
+                "spacing in real time is uneven across this timelapse), so read it as relative, not absolute."
+            )
+            mc1, mc2 = st.columns([1, 2])
+            with mc1:
+                st.markdown(f'<div class="small-label">Overall</div>'
+                            f'<div class="big-stat">{motion_score.get("overall_avg_shift", 0):.0f}</div>'
+                            f'<div class="small-label">avg. shift / snapshot pair</div>',
+                            unsafe_allow_html=True)
+            with mc2:
+                st.plotly_chart(motion_chart(motion_score), width='stretch', config={"displayModeBar": False})
+        else:
+            st.caption("Not enough consecutive-frame matches were available to compute a motion score for this session.")
+
+        st.markdown('<div class="section-title" style="margin-top:1.2rem;">Per-camera breakdown</div>', unsafe_allow_html=True)
+        st.caption("How many sampled frames each camera saw under each light color")
+        colors_all = list(avg_per_color.keys())
+        st.plotly_chart(camera_breakdown_chart(cam_a, cam_b, colors_all), width='stretch',
+                         config={"displayModeBar": False})
+
+        st.markdown('<div class="section-title" style="margin-top:1.2rem;">Day vs. night frames sampled</div>', unsafe_allow_html=True)
         st.plotly_chart(daynight_chart(cam_a, cam_b), width='stretch', config={"displayModeBar": False})
-    with dn_col2:
-        st.markdown('<div class="section-title">Summary</div>', unsafe_allow_html=True)
+
+    with tab_summary:
         with st.spinner("Generating summary..."):
             narration = generate_ai_summary(stats, session_label)
         st.markdown(narration)
-
-    with st.expander("Raw stats JSON"):
-        st.json(stats)
 
 
 sessions = list_demo_sessions()

@@ -98,3 +98,60 @@ def compute_motion_score(frame_sequence):
         "frame_pairs_matched": pairs_with_signal,
         "avg_shift_by_color": avg_by_color,
     }
+
+
+def _centroid(points):
+    if not points:
+        return None
+    xs = [p[0] for p in points]
+    ys = [p[1] for p in points]
+    return (sum(xs) / len(xs), sum(ys) / len(ys))
+
+
+def compute_centroid_drift(frame_sequence):
+    """
+    Alternative motion signal, suggested by the client as a comparison point
+    (2026-07-23): instead of matching individual scallops between frames,
+    collapse each frame's detections down to a single point - the centroid
+    (average position) of the whole cluster - and measure how far THAT point
+    moves between consecutive frames.
+
+    This answers a genuinely different question than compute_motion_score()
+    above. Nearest-neighbor matching picks up general shuffling/repositioning
+    even if the group's overall footprint stays put (e.g. scallops swapping
+    places, or half the tank scattering while the other half stays still -
+    the group center of mass barely moves but the matched-pair average shift
+    is large). Centroid drift is blind to that kind of local churn and only
+    reflects a coordinated net shift of where the group as a whole sits - it
+    would go up if the group is drifting toward one wall/corner over time,
+    and stay near zero even with lots of activity if that activity doesn't
+    have a net direction.
+
+    Returns dict: overall_avg_drift, avg_drift_by_color, frame_pairs_matched
+    (here "matched" means both frames in the pair had at least one detection
+    to compute a centroid from, not an individual-scallop match).
+    """
+    all_drifts = []
+    by_color_drifts = {}
+    pairs_with_signal = 0
+
+    for (_, points_a), (color_b, points_b) in zip(frame_sequence, frame_sequence[1:]):
+        centroid_a = _centroid(points_a)
+        centroid_b = _centroid(points_b)
+        if centroid_a is None or centroid_b is None:
+            continue
+        d = _dist(centroid_a, centroid_b)
+        pairs_with_signal += 1
+        all_drifts.append(d)
+        by_color_drifts.setdefault(color_b, []).append(d)
+
+    overall_avg = sum(all_drifts) / len(all_drifts) if all_drifts else 0.0
+    avg_by_color = {
+        c: sum(vals) / len(vals) for c, vals in by_color_drifts.items()
+    }
+
+    return {
+        "overall_avg_drift": overall_avg,
+        "frame_pairs_matched": pairs_with_signal,
+        "avg_drift_by_color": avg_by_color,
+    }

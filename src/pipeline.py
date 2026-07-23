@@ -28,6 +28,12 @@ scallops' positions shifted from one snapshot to the next. Explicitly framed
 as a relative/comparative signal, not a calibrated speed, since sample
 spacing in real time is uneven (see motion.py's docstring for why).
 
+CENTROID DRIFT (added 2026-07-23, client-suggested alternative): a second,
+complementary motion signal - also in motion.py - that tracks the group
+centroid's frame-to-frame movement instead of matching individuals. Answers a
+different question than the motion score above (net group drift vs. general
+local shuffling); see compute_centroid_drift()'s docstring for the distinction.
+
 Usage:
     python pipeline.py --tank bottom \
         --cam-a data/raw/bottom_left.mp4 --cam-a-name bottom_left \
@@ -46,7 +52,7 @@ from ultralytics import YOLO
 from light_classifier import classify_frame
 from rectify import rectify_points
 from heatmap import HeatmapAccumulator
-from motion import compute_motion_score
+from motion import compute_motion_score, compute_centroid_drift
 
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "..", "model", "best.pt")
 CONF_THRESHOLD = 0.20  # 0.35 was visibly missing partially-overlapping scallops in dense clusters (confirmed by spot-checking boxes at multiple thresholds on real frames) - 0.20 catches those without adding obvious false positives
@@ -147,6 +153,7 @@ def process_camera(video_path, camera_name, flip_axis, model, scallop_class_idx)
             frame_sequence.append((light_color, rectified))
 
     motion = compute_motion_score(frame_sequence)
+    centroid_drift = compute_centroid_drift(frame_sequence)
 
     return {
         "frames_sampled": len(frames),
@@ -155,6 +162,7 @@ def process_camera(video_path, camera_name, flip_axis, model, scallop_class_idx)
         "light_color_observation_counts": dict(light_color_observation_counts),
         "rectified_points_by_color": dict(rectified_points_by_color),
         "motion": motion,
+        "centroid_drift": centroid_drift,
     }
 
 
@@ -260,6 +268,31 @@ def run_session(tank_name, cam_a_path, cam_a_name, cam_b_path, cam_b_name, out_d
         "frame_pairs_matched": total_pairs,
     }
 
+    # Same weighted-combination approach as motion_score above, applied to
+    # the client-suggested centroid-drift alternative metric.
+    drift_a, drift_b = res_a["centroid_drift"], res_b["centroid_drift"]
+    total_drift_pairs = drift_a["frame_pairs_matched"] + drift_b["frame_pairs_matched"]
+    if total_drift_pairs:
+        combined_avg_drift = (
+            drift_a["overall_avg_drift"] * drift_a["frame_pairs_matched"]
+            + drift_b["overall_avg_drift"] * drift_b["frame_pairs_matched"]
+        ) / total_drift_pairs
+    else:
+        combined_avg_drift = 0.0
+
+    drift_colors = set(drift_a["avg_drift_by_color"]) | set(drift_b["avg_drift_by_color"])
+    combined_drift_by_color = {}
+    for c in drift_colors:
+        vals = [m["avg_drift_by_color"][c] for m in (drift_a, drift_b) if c in m["avg_drift_by_color"]]
+        if vals:
+            combined_drift_by_color[c] = sum(vals) / len(vals)
+
+    centroid_drift_score = {
+        "overall_avg_drift": combined_avg_drift,
+        "avg_drift_by_color": combined_drift_by_color,
+        "frame_pairs_matched": total_drift_pairs,
+    }
+
     stats = {
         "tank": tank_name,
         "camera_a": {
@@ -269,6 +302,7 @@ def run_session(tank_name, cam_a_path, cam_a_name, cam_b_path, cam_b_name, out_d
             "day_night_frame_counts": res_a["day_night_frame_counts"],
             "observation_count": sum(res_a["light_color_observation_counts"].values()),
             "motion": motion_a,
+            "centroid_drift": drift_a,
         },
         "camera_b": {
             "name": cam_b_name,
@@ -277,12 +311,14 @@ def run_session(tank_name, cam_a_path, cam_a_name, cam_b_path, cam_b_name, out_d
             "day_night_frame_counts": res_b["day_night_frame_counts"],
             "observation_count": sum(res_b["light_color_observation_counts"].values()),
             "motion": motion_b,
+            "centroid_drift": drift_b,
         },
         "light_color_observation_counts": light_color_observation_counts,
         "light_color_observation_fractions": light_color_observation_fractions,
         "light_color_avg_per_frame": light_color_avg_per_frame,
         "half_fractions_by_color": half_fractions_by_color,
         "motion_score": motion_score,
+        "centroid_drift_score": centroid_drift_score,
         "total_floor_observations": total_obs,
         "heatmap_paths": heatmap_paths,
     }

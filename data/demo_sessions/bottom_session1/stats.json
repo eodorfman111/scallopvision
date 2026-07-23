@@ -21,6 +21,15 @@
         "green": 24.379634471987647,
         "blue": 22.380588819794276
       }
+    },
+    "centroid_drift": {
+      "overall_avg_drift": 44.2965827179311,
+      "frame_pairs_matched": 150,
+      "avg_drift_by_color": {
+        "red": 42.8227533393612,
+        "green": 42.126012961945925,
+        "blue": 49.446979603427394
+      }
     }
   },
   "camera_b": {
@@ -44,6 +53,15 @@
         "green": 21.746144019613585,
         "blue": 21.65046842869222
       }
+    },
+    "centroid_drift": {
+      "overall_avg_drift": 38.789104753316686,
+      "frame_pairs_matched": 150,
+      "avg_drift_by_color": {
+        "red": 33.12517270383435,
+        "green": 43.332962434406,
+        "blue": 39.10685508861974
+      }
     }
   },
   "light_color_observation_counts": {
@@ -66,29 +84,38 @@
       0.37673527002334595,
       0.623264729976654
     ],
-    "red": [
-      0.3576594293117523,
-      0.6423405408859253
-    ],
     "blue": [
       0.3314746022224426,
       0.6685253977775574
+    ],
+    "red": [
+      0.3576594293117523,
+      0.6423405408859253
     ]
   },
   "motion_score": {
     "overall_avg_shift": 23.659788558684212,
     "avg_shift_by_color": {
       "green": 23.062889245800616,
-      "red": 26.00080563063768,
-      "blue": 22.01552862424325
+      "blue": 22.01552862424325,
+      "red": 26.00080563063768
+    },
+    "frame_pairs_matched": 300
+  },
+  "centroid_drift_score": {
+    "overall_avg_drift": 41.54284373562389,
+    "avg_drift_by_color": {
+      "green": 42.72948769817596,
+      "blue": 44.276917346023566,
+      "red": 37.973963021597775
     },
     "frame_pairs_matched": 300
   },
   "total_floor_observations": 5455,
   "heatmap_paths": {
     "green": "C:\\Users\\leodo\\claude\\scallopvision\\data\\demo_sessions\\bottom_session1\\heatmap_green.png",
-    "red": "C:\\Users\\leodo\\claude\\scallopvision\\data\\demo_sessions\\bottom_session1\\heatmap_red.png",
     "blue": "C:\\Users\\leodo\\claude\\scallopvision\\data\\demo_sessions\\bottom_session1\\heatmap_blue.png",
+    "red": "C:\\Users\\leodo\\claude\\scallopvision\\data\\demo_sessions\\bottom_session1\\heatmap_red.png",
     "overall": "C:\\Users\\leodo\\claude\\scallopvision\\data\\demo_sessions\\bottom_session1\\heatmap_overall.png"
   }
 }

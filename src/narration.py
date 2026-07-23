@@ -73,6 +73,66 @@ def _motion_sentence(motion_score: dict):
     )
 
 
+def _compare_magnitudes(a: float, b: float, rel_tol: float = 0.15):
+    """Precomputes the centroid-drift-vs-motion-score comparison as plain
+    text so the LLM only has to paraphrase it, not do the arithmetic itself
+    - asking an LLM to eyeball-compare two numbers in a prompt is exactly the
+    kind of thing that produces confidently-wrong output (verified: gpt-4o-mini
+    stated "41.5 is much smaller than 23.7" in testing here)."""
+    if b == 0:
+        return f"centroid drift ({a:.1f}) vs. motion score (0) - no valid comparison, motion score was zero"
+    ratio = a / b
+    if abs(ratio - 1) <= rel_tol:
+        return f"centroid drift ({a:.1f}) and motion score ({b:.1f}) are roughly comparable in magnitude"
+    elif ratio > 1:
+        return f"centroid drift ({a:.1f}) is LARGER than the motion score ({b:.1f}), by about {ratio:.1f}x"
+    else:
+        return f"centroid drift ({a:.1f}) is SMALLER than the motion score ({b:.1f}), by about {1/ratio:.1f}x"
+
+
+def _centroid_vs_motion_note(centroid_drift_score: dict, motion_score: dict):
+    """Appended verbatim after the LLM's response rather than left for the
+    LLM to state itself - see _compare_magnitudes' docstring for why this
+    specific comparison is handled in code, not by the model."""
+    if not centroid_drift_score.get("frame_pairs_matched") or not motion_score.get("frame_pairs_matched"):
+        return ""
+    a = centroid_drift_score.get("overall_avg_drift", 0)
+    b = motion_score.get("overall_avg_shift", 0)
+    comparison = _compare_magnitudes(a, b)
+    if a > b:
+        interpretation = (
+            "Counterintuitively, this doesn't mean the group is drifting together faster than "
+            "individual scallops move - it more likely means the specific set of scallops the "
+            "detector picked up differs somewhat between frames (occlusion/visibility changes which "
+            "individuals are counted), which shifts the average position even without real "
+            "coordinated movement."
+        )
+    elif a < b:
+        interpretation = (
+            "This is consistent with the movement being mostly local shuffling (scallops "
+            "repositioning individually) rather than the whole group drifting together toward one "
+            "side of the tank."
+        )
+    else:
+        interpretation = "The two metrics are measuring different things, so this rough agreement is not strong evidence either way."
+    return f"*Note on comparing the two motion metrics: {comparison}. {interpretation}*"
+
+
+def _centroid_drift_sentence(centroid_drift_score: dict, motion_score: dict = None):
+    if not centroid_drift_score or not centroid_drift_score.get("frame_pairs_matched"):
+        return "Not enough consecutive frames with detections were available to compute centroid drift."
+    overall = centroid_drift_score.get("overall_avg_drift", 0)
+    comparison = ""
+    if motion_score and motion_score.get("frame_pairs_matched"):
+        comparison = f" In this session, {_compare_magnitudes(overall, motion_score.get('overall_avg_shift', 0))}."
+    return (
+        f"As a second, complementary signal, the group's overall center of mass shifted by an "
+        f"average of {overall:.0f} (rectified-space units) between consecutive frames - this is "
+        f"blind to scallops shuffling around locally and only picks up a coordinated net drift of "
+        f"the whole group's position.{comparison}"
+    )
+
+
 def generate_fallback_summary(stats: dict, session_name: str = "this tank") -> str:
     cam_a = stats.get("camera_a", {})
     cam_b = stats.get("camera_b", {})
@@ -93,7 +153,7 @@ This analysis sampled {total_frames} independent frames across both camera angle
 
 Overall, {_preference_sentence(avgs)}.
 
-**Motion:** {_motion_sentence(stats.get("motion_score", {}))}
+**Motion:** {_motion_sentence(stats.get("motion_score", {}))} {_centroid_drift_sentence(stats.get("centroid_drift_score", {}), stats.get("motion_score", {}))}
 
 *(Rule-based summary — set an OPENAI_API_KEY or GEMINI_API_KEY environment variable for a fuller narrative write-up.)*"""
 
@@ -118,6 +178,7 @@ def generate_ai_summary(stats: dict, session_name: str = "this tank") -> str:
         cam_b = stats.get("camera_b", {})
         avgs = stats.get("light_color_avg_per_frame", {})
         motion_score = stats.get("motion_score", {})
+        centroid_drift_score = stats.get("centroid_drift_score", {})
 
         prompt = f"""
         You are a marine biology research assistant summarizing a scallop light-preference tank study.
@@ -158,8 +219,24 @@ def generate_ai_summary(stats: dict, session_name: str = "this tank") -> str:
         close to each other (within ~15%), say there's no meaningful difference by color rather
         than inventing one. Do not call this "velocity," "speed," or give it a unit like cm/s.
 
-        Write a concise (under 200 words) plain-English summary covering both the light-color
-        detection pattern and the motion score. For the color pattern, e.g. "Frames lit green
+        CENTROID DRIFT (second, complementary motion signal, client-suggested): overall_avg_drift =
+        {centroid_drift_score.get('overall_avg_drift', 0):.1f}, based on
+        {centroid_drift_score.get('frame_pairs_matched', 0)} frame pairs. Instead of matching
+        individual scallops, this collapses each frame's detections to a single centroid (average
+        position) and measures how far THAT ONE POINT moves between frames. It answers a different
+        question than the motion score: it's blind to scallops shuffling around locally (swapping
+        places, scattering without a net direction) and only picks up a coordinated net drift of the
+        whole group toward one side of the tank.
+
+        IMPORTANT: do NOT compare the centroid drift number's magnitude to the motion score number
+        yourself (e.g. don't say one is "larger" or "smaller" than the other, and don't compute a
+        ratio) - that comparison is handled separately and appended after your response, and doing it
+        yourself risks getting the direction backwards. Just describe what centroid drift is and its
+        own value; leave the cross-metric comparison out entirely.
+
+        Write a concise (under 200 words) plain-English summary covering the light-color detection
+        pattern, the motion score, and the centroid drift's own value (no comparison between the two).
+        For the color pattern, e.g. "Frames lit green
         averaged X scallops detected, versus Y under blue and Z under red." If the differences are
         small (under ~15% relative), say explicitly that there's no meaningful difference rather
         than dressing up noise as a preference. Frame this as an aggregate spatial/visibility
@@ -178,9 +255,11 @@ def generate_ai_summary(stats: dict, session_name: str = "this tank") -> str:
                 {"role": "user", "content": prompt},
             ],
             temperature=0.3,
-            max_tokens=400,
+            max_tokens=450,
         )
-        return response.choices[0].message.content
+        ai_text = response.choices[0].message.content
+        comparison_note = _centroid_vs_motion_note(centroid_drift_score, motion_score)
+        return f"{ai_text}\n\n{comparison_note}" if comparison_note else ai_text
     except Exception as e:
         fallback = generate_fallback_summary(stats, session_name)
         return f"{fallback}\n\n*(Note: LLM summary generation failed ({e}). Displaying rule-based fallback.)*"

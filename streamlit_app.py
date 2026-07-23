@@ -335,6 +335,17 @@ def motion_chart(motion_score):
     return _dark_layout(fig, height=220, yaxis_title="Avg. positional shift")
 
 
+def centroid_drift_chart(centroid_drift_score):
+    by_color = centroid_drift_score.get("avg_drift_by_color", {})
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=[COLOR_LABELS.get(c, c).title() for c in by_color],
+        y=list(by_color.values()),
+        marker_color=[COLOR_HEX.get(c, "#7c8896") for c in by_color],
+    ))
+    return _dark_layout(fig, height=220, yaxis_title="Avg. centroid drift")
+
+
 st.markdown("""
 <div class="hero">
   <div class="hero-eyebrow">Coonamessett Farm Foundation — Scallop Light Study</div>
@@ -560,6 +571,26 @@ def render_results(stats: dict, heatmap_paths: dict, session_label: str):
                 st.plotly_chart(motion_chart(motion_score), width='stretch', config={"displayModeBar": False})
         else:
             st.caption("Not enough consecutive-frame matches were available to compute a motion score for this session.")
+
+        centroid_drift_score = stats.get("centroid_drift_score", {})
+        if centroid_drift_score.get("frame_pairs_matched"):
+            st.markdown('<div class="section-title" style="margin-top:1.2rem;">Centroid drift</div>', unsafe_allow_html=True)
+            st.caption(
+                "A second, complementary signal: instead of matching individual scallops, this tracks "
+                "the whole group's center of mass frame-to-frame. It's blind to local shuffling (scallops "
+                "swapping places) and only picks up a coordinated net drift toward one side of the tank. "
+                "It measures something genuinely different from the motion score above, so the two numbers "
+                "aren't expected to match — a gap between them (in either direction) reflects that difference "
+                "in method, not necessarily a contradiction."
+            )
+            cd1, cd2 = st.columns([1, 2])
+            with cd1:
+                st.markdown(f'<div class="small-label">Overall</div>'
+                            f'<div class="big-stat">{centroid_drift_score.get("overall_avg_drift", 0):.0f}</div>'
+                            f'<div class="small-label">avg. centroid shift / snapshot pair</div>',
+                            unsafe_allow_html=True)
+            with cd2:
+                st.plotly_chart(centroid_drift_chart(centroid_drift_score), width='stretch', config={"displayModeBar": False})
 
         st.markdown('<div class="section-title" style="margin-top:1.2rem;">Per-camera breakdown</div>', unsafe_allow_html=True)
         st.caption("How many sampled frames each camera saw under each light color")

@@ -19,6 +19,14 @@
         "red": 34.22718664263213,
         "green": 36.575054313301635
       }
+    },
+    "centroid_drift": {
+      "overall_avg_drift": 70.7391146506358,
+      "frame_pairs_matched": 150,
+      "avg_drift_by_color": {
+        "red": 70.18278102690064,
+        "green": 71.21302847826205
+      }
     }
   },
   "camera_b": {
@@ -40,6 +48,14 @@
         "red": 15.083877715947027,
         "green": 8.90284189941504
       }
+    },
+    "centroid_drift": {
+      "overall_avg_drift": 36.215628571406,
+      "frame_pairs_matched": 163,
+      "avg_drift_by_color": {
+        "red": 38.93792604995073,
+        "green": 33.021466196580185
+      }
     }
   },
   "light_color_observation_counts": {
@@ -55,27 +71,35 @@
     "green": 19.891025641025642
   },
   "half_fractions_by_color": {
-    "red": [
-      0.3299700915813446,
-      0.670029878616333
-    ],
     "green": [
       0.3689899444580078,
       0.6310100555419922
+    ],
+    "red": [
+      0.3299700915813446,
+      0.670029878616333
     ]
   },
   "motion_score": {
     "overall_avg_shift": 23.384503703445734,
     "avg_shift_by_color": {
-      "red": 24.655532179289576,
-      "green": 22.738948106358336
+      "green": 22.738948106358336,
+      "red": 24.655532179289576
+    },
+    "frame_pairs_matched": 313
+  },
+  "centroid_drift_score": {
+    "overall_avg_drift": 52.760430206819635,
+    "avg_drift_by_color": {
+      "green": 52.11724733742112,
+      "red": 54.56035353842569
     },
     "frame_pairs_matched": 313
   },
   "total_floor_observations": 6202,
   "heatmap_paths": {
-    "red": "C:\\Users\\leodo\\claude\\scallopvision\\data\\demo_sessions\\top_session1\\heatmap_red.png",
     "green": "C:\\Users\\leodo\\claude\\scallopvision\\data\\demo_sessions\\top_session1\\heatmap_green.png",
+    "red": "C:\\Users\\leodo\\claude\\scallopvision\\data\\demo_sessions\\top_session1\\heatmap_red.png",
     "overall": "C:\\Users\\leodo\\claude\\scallopvision\\data\\demo_sessions\\top_session1\\heatmap_overall.png"
   }
 }
